@@ -8,7 +8,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Documentação API Do_Magic')
     .setDescription('Api do jogo de RPG Do_Magic')
-    .setVersion('1.0')
+    .setVersion('1.9.7')
     .addTag('Do Magic')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
