@@ -4,6 +4,7 @@ import { UpdatePersonagemDto } from './dto/update-personagem.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Personagem, PersonagemDocument } from './schemas/personagem.schema';
 import { Model } from 'mongoose';
+import { ClassePersonagem } from 'src/enums/classePersonagens.enum';
 
 @Injectable()
 export class PersonagemService {
@@ -15,14 +16,20 @@ export class PersonagemService {
 
   async create(createDto: CreatePersonagemDto): Promise<Personagem> {
     try {
+      const normalizaClasse = createDto.classe.toUpperCase();
       const { forca, defesa } = createDto;
 
       if (forca + defesa > 10) {
-        throw new BadRequestException('Você tem apenas 10 pontos de habilidade!')
+        throw new BadRequestException('Você tem apenas 10 pontos de habilidade para distribuir!')
+      }
+
+      if (!Object.values(ClassePersonagem).includes(normalizaClasse as ClassePersonagem)) {
+        throw new BadRequestException('Classe inexistente!');
       }
 
       const personagem = new this.personagemModel({
         ...createDto,
+        classe: normalizaClasse,
         nivel: 1,
         itensMagicos: [],
       })
