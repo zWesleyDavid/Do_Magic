@@ -3,5 +3,5 @@ export enum ClassePersonagem {
     Mago = 'Mago',
     Arqueiro = 'Arqueiro',
     Ladino = 'Ladino',
-    Bardo = 'Bardo'
+    Bardo = 'Bardo',
 }
