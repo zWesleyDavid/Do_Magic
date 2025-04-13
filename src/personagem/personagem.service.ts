@@ -1,23 +1,40 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { CreatePersonagemDto } from './dto/create-personagem.dto';
 import { UpdatePersonagemDto } from './dto/update-personagem.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Personagem, PersonagemDocument } from './schemas/personagem.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { ClassePersonagem } from 'src/enums/classePersonagens.enum';
+import { geradorDeIDs } from 'src/utils/idGerador';
+import { v4 as uuidv4 } from 'uuid';
+import { ItemMagico } from '../itens/schemas/itens.schema';
+import { ItemMagicoService } from '../itens/itens.service';
 
 @Injectable()
 export class PersonagemService {
 
   constructor(
     @InjectModel(Personagem.name)
-    private readonly personagemModel: Model<PersonagemDocument>, 
-  ) {}
+    private readonly personagemModel: Model<PersonagemDocument>,
+    @Inject(forwardRef(() => ItemMagicoService))
+    private readonly itemModel: ItemMagicoService,
+  ) { }
 
   async create(createDto: CreatePersonagemDto): Promise<Personagem> {
     try {
+      const nomeExistente = await this.personagemModel.findOne({ nome: createDto.nome });
+      if (nomeExistente) {
+        throw new BadRequestException('Nome já está em uso.');
+      }
+
+      const apelidoExistente = await this.personagemModel.findOne({ apelido: createDto.apelido });
+      if (apelidoExistente) {
+        throw new BadRequestException('Apelido já está em uso.');
+      }
+
       const normalizaClasse = createDto.classe.toUpperCase();
       const { forca, defesa } = createDto;
+      const identificador = geradorDeIDs();
 
       if (forca + defesa > 10) {
         throw new BadRequestException('Você tem apenas 10 pontos de habilidade para distribuir!')
@@ -29,6 +46,7 @@ export class PersonagemService {
 
       const personagem = new this.personagemModel({
         ...createDto,
+        _id: identificador,
         classe: normalizaClasse,
         nivel: 1,
         itensMagicos: [],
@@ -46,7 +64,12 @@ export class PersonagemService {
 
   async findAll(): Promise<Personagem[]> {
     try {
-      return await this.personagemModel.find();
+      const personagens = await this.personagemModel.find().lean();
+      const personagensComItens = personagens.map((personagem) => ({
+        ...personagem,
+        itens: personagem.itens.map((item) => new Types.ObjectId(item)),
+      }));
+      return personagensComItens;
     } catch (error) {
       throw new InternalServerErrorException('Não foi possível listar personagens');
     }
@@ -54,13 +77,14 @@ export class PersonagemService {
 
   async findById(id: string): Promise<Personagem> {
     try {
-      const personagem = await this.personagemModel.findById(id);
-
+      const personagem = await this.personagemModel.findById(id).lean();
       if (!personagem) {
         throw new NotFoundException('Personagem não encontrado');
       }
-
-      return personagem;
+      return {
+        ...personagem,
+        itens: personagem.itens.map((item) => new Types.ObjectId(item)),
+      };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -97,11 +121,12 @@ export class PersonagemService {
       if (!result) {
         throw new NotFoundException('Personagem não encontrado');
       }
+
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
+      throw new InternalServerErrorException('Erro ao deletar personagem');
     }
-    throw new InternalServerErrorException('Erro ao deletar personagem');
   }
 }

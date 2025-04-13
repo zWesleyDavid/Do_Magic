@@ -2,33 +2,34 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Types } from "mongoose";
 import { ref } from "process";
 import { ClassePersonagem } from "src/enums/classePersonagens.enum";
-import { Item } from "src/itens/schemas/itens.schema";
 
 export type PersonagemDocument = Personagem & Document;
 
 @Schema()
 export class Personagem {
-    id: string;
-    @Prop({required: true})
+    @Prop({ required: true, unique: true, type: Types.ObjectId })
+    _id: Types.ObjectId;
+
+    @Prop({ required: true })
     nome: string;
-    
-    @Prop({required: true})
+
+    @Prop({ required: true })
     apelido: string;
-    
-    @Prop({enum: ClassePersonagem, required: true})
+
+    @Prop({ enum: ClassePersonagem, required: true })
     classe: ClassePersonagem;
-    
-    @Prop({required: true})
+
+    @Prop({ default: 1 })
     nivel: number;
-    
-    @Prop({type: [{ type: Types.ObjectId, ref: 'Item'}], default:[]})
+
+    @Prop({ type: [{ type: Types.ObjectId, ref: 'Item' }], default: [] })
     itens: Types.ObjectId[];
-    
-    @Prop({required: true})
+
+    @Prop({ required: true })
     forca: number;
-    
-    @Prop({required: true})
-    defesa: number; 
+
+    @Prop({ required: true })
+    defesa: number;
 }
 
 export const PersonagemSchema = SchemaFactory.createForClass(Personagem);
